@@ -1,0 +1,75 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <functional>
+
+class MovingAverage {  //实时平均线类
+public:
+    MovingAverage(unsigned long time_window) : time_window_(time_window) {}
+
+    void add_price_data(const std::pair<unsigned long, double>& price_data) {
+        price_data_.push_back(price_data);
+        remove_old_data();
+        calculate_moving_average();
+        if (moving_average_ != last_moving_average_) {
+            last_moving_average_ = moving_average_;
+            on_moving_average_changed(moving_average_);
+        }
+    }
+
+    double get_moving_average() const {
+        return moving_average_;
+    }
+
+    void set_moving_average_changed_callback(std::function<void(double)> callback) {
+        moving_average_changed_callback_ = callback;
+    }
+
+private:
+    void remove_old_data() {
+        unsigned long current_time = price_data_.back().first;
+        price_data_.erase(std::remove_if(price_data_.begin(), price_data_.end(),
+            [&](const std::pair<unsigned long, double>& data) {
+                return current_time - data.first > time_window_;
+            }),
+            price_data_.end());
+    }
+
+    void calculate_moving_average() {
+        double sum = 0;
+        for (const auto& data : price_data_) {
+            sum += data.second;
+        }
+        moving_average_ = sum / static_cast<double>(price_data_.size());
+    }
+
+    void on_moving_average_changed(double new_moving_average) {
+        if (moving_average_changed_callback_) {
+            moving_average_changed_callback_(new_moving_average);
+        }
+    }
+
+    unsigned long time_window_;
+    std::vector<std::pair<unsigned long, double>> price_data_; 
+    double moving_average_ = 0;
+    double last_moving_average_ = 0;
+    std::function<void(double)> moving_average_changed_callback_;
+};
+
+int main() {
+    MovingAverage price(60000); //设置一分钟时间窗口
+
+    price.set_moving_average_changed_callback([](double new_moving_average) {
+        std::cout << "Moving average changed: " << new_moving_average << std::endl;
+        });
+
+    price.add_price_data({ 1682982215035, 100.12 });
+    price.add_price_data({ 1682982216528, 100.42 });
+    price.add_price_data({ 1682982221121, 99.53 });
+    // 调用添加数据方法
+
+    return 0;
+}
+
+//这个类有一个方法add_price_data来添加新的价格数据，并计算指定时间窗口内的移动平均值。
+//它还提供了一个方法set_moven_average_changed_callback，用于设置移动平均线变化时将调用的回调函数。
