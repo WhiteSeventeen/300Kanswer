@@ -9,7 +9,7 @@ public:
 
     void add_price_data(const std::pair<unsigned long, double>& price_data) {
         price_data_.push_back(price_data);
-        remove_old_data();
+        updata_moving_average_();
         calculate_moving_average();
         if (moving_average_ != last_moving_average_) {
             last_moving_average_ = moving_average_;
@@ -19,16 +19,21 @@ public:
 
     void updata_moving_average_()  //更新数据
     {
-        remove_old_data();
-        double sum = 0;
-        for (const auto& data : price_data_) {
-            sum += data.second;
+        unsigned long current_time = price_data_.back().first;
+
+        while ((current_time - price_data_.front().first) > time_window_)
+        {
+            double old_price = price_data_.front().second;
+            if (last_moving_average_ > old_price)
+            {
+                moving_average_ = last_moving_average_ - (last_moving_average_ - old_price) / price_data_.size();
+            }
+            else
+                moving_average_ = last_moving_average_ + (old_price - last_moving_average_) / price_data_.size();
+            price_data_.erase(price_data_.begin());
         }
-        moving_average_ = sum / static_cast<double>(price_data_.size());
-        if (moving_average_ != last_moving_average_) {
-            last_moving_average_ = moving_average_;
-            on_moving_average_changed(moving_average_);   
-        }
+        
+        
     }
 
     //获取当前平均值
@@ -42,7 +47,8 @@ public:
     }
 
 private:
-    void remove_old_data() {
+ 
+/*      void remove_old_data() {
         unsigned long current_time = price_data_.back().first; //或者可以   unsigned long current_time = time(NULL); 当前系统时间
         price_data_.erase(std::remove_if(price_data_.begin(), price_data_.end(),
             [&](const std::pair<unsigned long, double>& data) {
@@ -50,6 +56,7 @@ private:
             }),
             price_data_.end());
     }
+*/
 
     void calculate_moving_average() {
         double new_price = price_data_.back().second;
